@@ -10,6 +10,7 @@ import org.apache.commons.io.FilenameUtils
 import org.opencv.core.Mat
 import java.io.BufferedReader
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileReader
 import kotlin.math.abs
 
@@ -36,7 +37,41 @@ object ImageStore {
         if (!file.exists()) {
             return ImageSpec(Mat())
         }
-        val bytes = FileUtils.readFileToByteArray(file)
+
+        val bytes = if (ext.lowercase() == "pfm") {
+            // Remove trailing spaces when reading PFM files.
+            // This is a workaround for the issue with OpenCV not handling trailing spaces correctly.
+            val totalSize = file.length()
+            val allBytes = ByteArray(totalSize.toInt())
+            FileInputStream(file).use { fis ->
+                val newLineCode = '\n'.code
+                val spaceCode = ' '.code.toByte()
+
+                var lineCount = 0
+                var fisPos = 0
+                var bytesPos = 0
+
+                while (lineCount < 3) {
+                    val value = fis.read()
+                    if (value == newLineCode) {
+                        lineCount++
+                    }
+
+                    if (value == newLineCode && bytesPos > 0 && allBytes[bytesPos - 1] == spaceCode) {
+                        allBytes[bytesPos - 1] = newLineCode.toByte()
+                    } else {
+                        allBytes[bytesPos] = value.toByte()
+                        bytesPos++
+                    }
+                    fisPos ++
+                }
+                fis.readNBytes(allBytes, bytesPos, (totalSize - fisPos).toInt())
+            }
+            allBytes
+        } else {
+            FileUtils.readFileToByteArray(file)
+        }
+
 
         val lastModified = file.lastModified()
         var mat: Mat
