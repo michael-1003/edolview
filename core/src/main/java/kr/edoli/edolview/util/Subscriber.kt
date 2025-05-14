@@ -3,8 +3,8 @@ package kr.edoli.edolview.util
 import rx.Subscription
 
 open class BaseSubscriber {
-    // Save stackTrace for debugging, drop 3 elements to avoid noise (Thread, Subscriber, Observable)
-    val stackTrace = Thread.currentThread().stackTrace.drop(3).toTypedArray()
+    // Save stackTrace for debugging, drop 3 elements to avoid noise (Thread, BaseSubscriber, Subscriber, Observable)
+    val stackTrace = Thread.currentThread().stackTrace.drop(4).toTypedArray()
 }
 
 data class Subscriber(val subject: Any, val subscription: Subscription, val description: String): BaseSubscriber()
