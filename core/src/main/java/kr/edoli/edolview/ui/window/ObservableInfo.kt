@@ -1,10 +1,13 @@
 package kr.edoli.edolview.ui.window
 
-import kr.edoli.edolview.util.ObservableContext
+import kr.edoli.edolview.util.*
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.JScrollPane
 import javax.swing.JTable
+import javax.swing.table.DefaultTableModel
 import kotlin.concurrent.fixedRateTimer
 
 class ObservableInfo private constructor() : BaseWindow() {
@@ -21,9 +24,15 @@ class ObservableInfo private constructor() : BaseWindow() {
         }
     }
 
+    var tableData = createData()
+    var observableData = ObservableContext.getAllObservables()
+
     val refresher = fixedRateTimer(period = 1000) {
         if (isVisible) {
-            val newData = createData()
+            tableData = createData()
+            observableData = ObservableContext.getAllObservables()
+
+            val newData = tableData
 
             (0 until table.rowCount).forEach { i ->
                 (0 until table.columnCount).forEach { j ->
@@ -32,8 +41,52 @@ class ObservableInfo private constructor() : BaseWindow() {
             }
         }
     }
+    val table = JTable(object : DefaultTableModel(tableData, arrayOf("Name", "Count", "Update Time", "Subjects")) {
+        override fun isCellEditable(row: Int, column: Int): Boolean {
+            return false // 모든 셀을 읽기 전용으로 설정
+        }
+    }).apply {
+        addMouseListener(object: MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.clickCount == 2) {
+                    val row = selectedRow
+                    if (row != -1) {
+                        val observableName = tableData[row][0] as String
 
-    val table = JTable(createData(), arrayOf("Name", "Count", "Update Time", "Subjects"))
+                        if (e.isControlDown) {
+                            // Show the stack trace of subscribers
+                            val subscribers = when (val observable = observableData[row]) {
+                                is ObservableLazyValue<*> -> observable.subscribers
+                                is ObservableValue<*> -> observable.subscribers
+                                is Observable<*> -> observable.subscribers
+                                is ObservableList<*> -> observable.subscribers
+                                else -> null // 다른 타입의 경우 처리
+                            }
+
+                            if (subscribers != null) {
+                                println("========== Subscribers stack trace for $observableName: ==========")
+                                for (subscriber in subscribers) {
+                                    val stackTrace = subscriber.stackTrace
+                                    for (stackTraceElement in stackTrace) {
+                                        println(stackTraceElement)
+                                    }
+                                    println("-----------------------------------")
+                                }
+                            }
+                        } else {
+                            // Show the stack trace of the last update of the observable
+                            val observable = observableData[row]
+                            println("========== Last update stack trace for $observableName: ==========")
+                            for (stackTraceElement in observable.lastUpdateStackTrace) {
+                                println(stackTraceElement)
+                            }
+                            println("-----------------------------------")
+                        }
+                    }
+                }
+            }
+        })
+    }
 
     init {
         title = "Info"

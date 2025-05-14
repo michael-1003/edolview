@@ -24,4 +24,8 @@ object ObservableContext {
             throw Error("Observable stack does not match. Expected ${observable}, but get $popValue")
         }
     }
+
+    fun getAllObservables(): List<BaseObservable> {
+        return observables + observableValues + observableLazyValues + observableLists
+    }
 }

@@ -9,10 +9,10 @@ import rx.subjects.Subject
 class ObservableList<T>(
         private var list: List<T> = ArrayList(),
         private val initialIndex: Int = 0,
-        val name: String = "") {
+        val name: String = ""): BaseObservable() {
 
     private val observable: Subject<ObservableListItem<T>, ObservableListItem<T>> = BehaviorSubject.create()
-    val subscribers = ArrayList<ObservableValue.Subscriber>()
+    val subscribers = ArrayList<Subscriber>()
 
     val items: List<T>
         get() = list.toList()
@@ -23,8 +23,6 @@ class ObservableList<T>(
     var currentIndex = initialIndex
         private set
 
-    var lastTotalUpdateTime = 0L
-
     init {
         updateInternal {}
 
@@ -33,18 +31,18 @@ class ObservableList<T>(
 
     fun subscribe(subject: Any,
                   description: String,
-                  onNext: (list: List<T>, newValue: T?) -> Unit): ObservableValue.Subscriber {
+                  onNext: (list: List<T>, newValue: T?) -> Unit): Subscriber {
         val subscription = observable.subscribe { onNext(it.list, it.newValue) }
-        val subscriber = ObservableValue.Subscriber(subject, subscription, description)
+        val subscriber = Subscriber(subject, subscription, description)
         subscribers.add(subscriber)
         return subscriber
     }
 
     fun subscribeValue(subject: Any,
                   description: String,
-                  onNext: (newValue: T?) -> Unit): ObservableValue.Subscriber {
+                  onNext: (newValue: T?) -> Unit): Subscriber {
         val subscription = observable.subscribe { onNext(it.newValue) }
-        val subscriber = ObservableValue.Subscriber(subject, subscription, description)
+        val subscriber = Subscriber(subject, subscription, description)
         subscribers.add(subscriber)
         return subscriber
     }
@@ -55,7 +53,7 @@ class ObservableList<T>(
         }
     }
 
-    fun unsubscribe(subscriber: ObservableValue.Subscriber) {
+    fun unsubscribe(subscriber: Subscriber) {
         subscriber.subscription.unsubscribe()
         subscribers.remove(subscriber)
     }

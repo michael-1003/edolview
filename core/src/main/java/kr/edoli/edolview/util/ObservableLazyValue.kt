@@ -7,13 +7,12 @@ import rx.subjects.Subject
 /**
  * Created by daniel on 16. 10. 2.
  */
-class ObservableLazyValue<T>(val initValue: T, val name: String, val checkValue: (T) -> T = {it}) {
+class ObservableLazyValue<T>(val initValue: T, val name: String, val checkValue: (T) -> T = {it}): BaseObservable() {
     private val observable: Subject<T, T> = BehaviorSubject.create()
     val subscribers = ArrayList<LazySubscriber>()
     private var value = initValue
     private var storedAction: (() -> T)? = null
 
-    var lastTotalUpdateTime = 0L
     var doExecuteCount = 0
 
     init {
@@ -93,6 +92,4 @@ class ObservableLazyValue<T>(val initValue: T, val name: String, val checkValue:
         storedAction = null
         observable.onNext(initValue)
     }
-
-    data class LazySubscriber(val subject: Any, val subscription: Subscription, val description: String, val doExecute: Boolean)
 }

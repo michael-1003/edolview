@@ -1,18 +1,15 @@
 package kr.edoli.edolview.util
 
-import rx.Subscription
 import rx.subjects.BehaviorSubject
 import rx.subjects.Subject
 
 /**
  * Created by daniel on 16. 10. 2.
  */
-class ObservableValue<T>(val initValue: T, val name: String, val checkValue: (T) -> T = {it}) {
+class ObservableValue<T>(val initValue: T, val name: String, val checkValue: (T) -> T = {it}): BaseObservable() {
     private val observable: Subject<T, T> = BehaviorSubject.create()
     val subscribers = ArrayList<Subscriber>()
     private var value = initValue
-
-    var lastTotalUpdateTime = 0L
 
     init {
         observable.onNext(initValue)
@@ -74,6 +71,4 @@ class ObservableValue<T>(val initValue: T, val name: String, val checkValue: (T)
     fun reset() {
         update(initValue)
     }
-
-    data class Subscriber(val subject: Any, val subscription: Subscription, val description: String)
 }
