@@ -1,9 +1,11 @@
 package kr.edoli.edolview.ui.vg
 
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.PolygonBatch
 import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector2
+import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.Disposable
 import kr.edoli.edolview.ui.drawLine
 import kr.edoli.edolview.ui.drawPolygon
@@ -28,6 +30,7 @@ interface SimpleVG {
     fun circle(x: Float, y: Float, radius: Float)
     fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float)
     fun polygon(points: FloatArray)
+    fun text(text: String, x: Float, y: Float, size: Float = 12f, align: Int = Align.left)
     fun fill()
     fun stroke()
     fun strokeAndFill()
@@ -105,12 +108,17 @@ class SVGSimpleVG : SimpleVG, Disposable {
         this.width = width
         this.height = height
         svgBuilder.clear()
-        svgBuilder.append("""<svg width="$width" height="$height" xmlns="http://www.w3.org/2000/svg"><g transform="scale(1, -1) translate(0, -$height)">""")
+        svgBuilder.append("""<svg width="$width" height="$height" xmlns="http://www.w3.org/2000/svg">""")
     }
 
     fun endSVG(): String {
-        svgBuilder.append("</g></svg>")
+        svgBuilder.append("</svg>")
         return svgBuilder.toString()
+    }
+
+    // Y 좌표를 SVG 좌표계로 변환
+    private fun transformY(y: Float): Float {
+        return height - y
     }
 
     override fun beginPath() {
@@ -125,7 +133,14 @@ class SVGSimpleVG : SimpleVG, Disposable {
     }
 
     override fun beginGroup(transform: Matrix4?) {
-        val transformStr = if (transform == null) "" else " transform=\"${matrixToSVGTransform(transform)}\""
+        val transformStr = if (transform == null) "" else {
+            val flippedMatrix = Matrix4(transform)
+            // y축 스케일을 반전
+            flippedMatrix.values[5] = -flippedMatrix.values[5]
+            // y 위치 조정
+            flippedMatrix.values[13] = height - flippedMatrix.values[13]
+            " transform=\"${matrixToSVGTransform(flippedMatrix)}\""
+        }
         svgBuilder.append("<g$transformStr>")
     }
 
@@ -134,13 +149,13 @@ class SVGSimpleVG : SimpleVG, Disposable {
     }
 
     override fun moveTo(x: Float, y: Float) {
-        pathBuilder.append(" M $x $y")
+        pathBuilder.append(" M $x ${transformY(y)}")
         pathStarted = true
     }
 
     override fun lineTo(x: Float, y: Float) {
         if (pathStarted) {
-            pathBuilder.append(" L $x $y")
+            pathBuilder.append(" L $x ${transformY(y)}")
         } else {
             moveTo(x, y)
         }
@@ -148,7 +163,7 @@ class SVGSimpleVG : SimpleVG, Disposable {
 
     override fun quadraticCurveTo(cx: Float, cy: Float, x: Float, y: Float) {
         if (pathStarted) {
-            pathBuilder.append(" Q $cx $cy, $x $y")
+            pathBuilder.append(" Q $cx ${transformY(cy)}, $x ${transformY(y)}")
         } else {
             moveTo(x, y)
         }
@@ -156,36 +171,38 @@ class SVGSimpleVG : SimpleVG, Disposable {
 
     override fun bezierCurveTo(cx1: Float, cy1: Float, cx2: Float, cy2: Float, x: Float, y: Float) {
         if (pathStarted) {
-            pathBuilder.append(" C $cx1 $cy1, $cx2 $cy2, $x $y")
+            pathBuilder.append(" C $cx1 ${transformY(cy1)}, $cx2 ${transformY(cy2)}, $x ${transformY(y)}")
         } else {
             moveTo(x, y)
         }
     }
 
     override fun rect(x: Float, y: Float, width: Float, height: Float) {
-        // In SVG we can use the rect element directly
+        // SVG에서 직사각형은 좌상단에서 시작하므로 y를 변환
+        val transformedY = transformY(y + height) // 왼쪽 위 모서리로 변환
+
         val strokeRGB = colorToRGBString(strokeColor)
         val fillRGB = colorToRGBString(fillColor)
 
-        svgBuilder.append("""<rect x="$x" y="$y" width="$width" height="$height" """)
+        svgBuilder.append("""<rect x="$x" y="$transformedY" width="$width" height="$height" """)
         svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
     }
 
     override fun circle(x: Float, y: Float, radius: Float) {
-        // Use SVG circle element
+        // 원의 중심점 y좌표 변환
         val strokeRGB = colorToRGBString(strokeColor)
         val fillRGB = colorToRGBString(fillColor)
 
-        svgBuilder.append("""<circle cx="$x" cy="$y" r="$radius" """)
+        svgBuilder.append("""<circle cx="$x" cy="${transformY(y)}" r="$radius" """)
         svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
     }
 
     override fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float) {
-        // Use SVG ellipse element
+        // 타원의 중심점 y좌표 변환
         val strokeRGB = colorToRGBString(strokeColor)
         val fillRGB = colorToRGBString(fillColor)
 
-        svgBuilder.append("""<ellipse cx="$x" cy="$y" rx="$radiusX" ry="$radiusY" """)
+        svgBuilder.append("""<ellipse cx="$x" cy="${transformY(y)}" rx="$radiusX" ry="$radiusY" """)
         svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
     }
 
@@ -193,8 +210,8 @@ class SVGSimpleVG : SimpleVG, Disposable {
         if (points.size < 4) return
 
         val pointsStr = StringBuilder()
-        for (i in 0 until points.size step 2) {
-            pointsStr.append("${points[i]},${points[i+1]} ")
+        for (i in points.indices step 2) {
+            pointsStr.append("${points[i]},${transformY(points[i+1])} ")
         }
 
         val strokeRGB = colorToRGBString(strokeColor)
@@ -202,6 +219,23 @@ class SVGSimpleVG : SimpleVG, Disposable {
 
         svgBuilder.append("""<polygon points="$pointsStr" """)
         svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
+    }
+
+    override fun text(text: String, x: Float, y: Float, size: Float, align: Int) {
+        // SVG 텍스트의 y 좌표는 텍스트의 하단이 아닌 상단을 기준으로 함
+        // 텍스트 높이의 대략적인 보정을 위해 사이즈의 절반 정도를 추가
+        val adjustedY = transformY(y) + size
+
+        val textAlign = when (align) {
+            Align.left -> "start"
+            Align.center -> "middle"
+            Align.right -> "end"
+            else -> "start"
+        }
+
+        svgBuilder.append("""<text x="$x" y="$adjustedY" font-size="$size" text-anchor="$textAlign" fill="${colorToRGBString(fillColor)}" >""")
+        svgBuilder.append(text)
+        svgBuilder.append("</text>")
     }
 
     override fun fill() {
@@ -264,20 +298,10 @@ class SVGSimpleVG : SimpleVG, Disposable {
         svgBuilder.clear()
         pathBuilder.clear()
     }
-
-    // Export the current SVG content to a file
-    fun exportToFile(filePath: String) {
-        try {
-            val svgContent = endSVG()
-            java.io.File(filePath).writeText(svgContent)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
 }
 
 // Default libGDX implementation
-class GDXSimpleVG(val batch: PolygonBatch) : SimpleVG {
+class GDXSimpleVG(val batch: PolygonBatch, val font: BitmapFont) : SimpleVG {
     private var path = Polyline()
     private val paths = mutableListOf<Polyline>()
     private val groupTransformStack = mutableListOf<Matrix4>()
@@ -384,6 +408,11 @@ class GDXSimpleVG(val batch: PolygonBatch) : SimpleVG {
         }
 
         closePath()
+    }
+
+    override fun text(text: String, x: Float, y: Float, size: Float, align: Int) {
+        batch.color = fillColor
+        font.draw(batch, text, x, y, 0f, align, false)
     }
 
     override fun fill() {

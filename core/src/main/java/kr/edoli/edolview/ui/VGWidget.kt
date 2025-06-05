@@ -7,14 +7,13 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.PolygonBatch
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
-import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.ui.Widget
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import kr.edoli.edolview.image.ClipboardUtils
 import kr.edoli.edolview.image.ImageConvert
+import kr.edoli.edolview.ui.res.Font
 import kr.edoli.edolview.ui.vg.GDXSimpleVG
 import kr.edoli.edolview.ui.vg.SVGSimpleVG
 import kr.edoli.edolview.ui.vg.SimpleVG
@@ -42,9 +41,11 @@ abstract class VGWidget : Widget() {
                 fboBatch.projectionMatrix = viewport.camera.combined
 
                 fboBatch.begin()
+                Gdx.gl.glClearColor(0f, 0f, 0f, 0f)
+                Gdx.gl.glClear(GL30.GL_COLOR_BUFFER_BIT)
 
                 // Draw the widget content
-                drawVG(GDXSimpleVG(fboBatch))
+                drawVG(GDXSimpleVG(fboBatch, Font.defaultFont))
 
                 fboBatch.end()
 
@@ -105,7 +106,7 @@ abstract class VGWidget : Widget() {
         val oldMatrix = batch.transformMatrix.cpy()
         batch.transformMatrix = batch.transformMatrix.translate(x, y, 0f)
 
-        val vg = GDXSimpleVG(batch as PolygonBatch)
+        val vg = GDXSimpleVG(batch as PolygonBatch, Font.defaultFont)
         drawVG(vg)
 
         batch.transformMatrix = oldMatrix
