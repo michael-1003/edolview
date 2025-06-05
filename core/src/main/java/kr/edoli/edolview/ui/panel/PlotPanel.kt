@@ -56,66 +56,16 @@ class PlotPanel : Panel(false) {
 
             plotWidget.channels = reducedMat.channels()
             plotWidget.data = FloatArray(data.size) { data[it].toFloat() }
+
+            val maxValue = data.maxOrNull() ?: return
+            var minValue = data.minOrNull() ?: return
+            if (minValue == maxValue) {
+                minValue = maxValue - 1.0f
+            }
+            plotWidget.maxValue = maxValue.toFloat()
+            plotWidget.minValue = minValue.toFloat()
         } else {
             plotWidget.data = null
-        }
-    }
-
-    class PlotWidget : Widget() {
-        val shapeRenderer = ShapeRenderer()
-        var data: FloatArray? = null
-        var channels = 0
-
-
-        override fun draw(batch: Batch, parentAlpha: Float) {
-            super.draw(batch, parentAlpha)
-
-            val data = this.data
-
-            if (data != null) {
-                batch.end()
-
-                shapeRenderer.projectionMatrix = batch.projectionMatrix
-                shapeRenderer.transformMatrix = batch.transformMatrix
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-
-                val maxValue = data.maxOrNull() ?: return
-                var minValue = data.minOrNull() ?: return
-                if (minValue == maxValue) {
-                    minValue = maxValue - 1.0f
-                }
-
-                val scale = height / (maxValue - minValue)
-                val size = data.size / channels
-                val step = width / (size - 1)
-
-                val colors = if (channels == 1) {
-                    arrayOf(Color.GRAY)
-                } else {
-                    arrayOf(
-                            Color.RED,
-                            Color.GREEN,
-                            Color.BLUE,
-                            Color.GRAY
-                    )
-                }
-
-                for (c in 0 until channels) {
-                    shapeRenderer.color = colors[c]
-
-                    var offsetX = x
-                    var beforeY = (data[c] - minValue) * scale + y
-                    for (i in 1 until size) {
-                        val curY = (data[c + i * channels] - minValue) * scale + y
-                        shapeRenderer.line(offsetX, beforeY, offsetX + step, curY)
-                        offsetX += step
-                        beforeY = curY
-                    }
-                }
-                shapeRenderer.end()
-
-                batch.begin()
-            }
         }
     }
 }
