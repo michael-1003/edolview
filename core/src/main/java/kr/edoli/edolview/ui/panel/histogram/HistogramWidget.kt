@@ -2,18 +2,16 @@ package kr.edoli.edolview.ui.panel.histogram
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.g2d.Batch
-import com.badlogic.gdx.scenes.scene2d.ui.Widget
 import kr.edoli.edolview.ui.UIRes
+import kr.edoli.edolview.ui.VGWidget
 import kr.edoli.edolview.util.Histogram
 
-class HistogramWidget : Widget() {
+class HistogramWidget : VGWidget() {
     val histograms = ArrayList<Histogram>()
     val isShow = ArrayList<Boolean>()
     val colors = arrayOf(Color.RED, Color.GREEN, Color.BLUE, Color.GRAY)
 
-    override fun draw(batch: Batch, parentAlpha: Float) {
-        super.draw(batch, parentAlpha)
-
+    override fun drawVG(batch: Batch) {
         while (isShow.size < histograms.size) {
             isShow.add(true)
         }
