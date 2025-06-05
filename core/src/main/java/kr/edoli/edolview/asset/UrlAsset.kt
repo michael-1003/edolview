@@ -3,6 +3,7 @@ package kr.edoli.edolview.asset
 import kr.edoli.edolview.image.ImageConvert
 import kr.edoli.edolview.image.ImageSpec
 import java.io.FileNotFoundException
+import java.net.URI
 import java.net.URL
 
 /**
@@ -14,7 +15,7 @@ class UrlAsset(private val url: String) : Asset() {
     override val shouldAddToRecentAssets = true
 
     override fun loadImageSpec(): ImageSpec? {
-        val urlObj = URL(url)
+        val urlObj = URI(url).toURL()
         val bytes = try {
             urlObj.readBytes()
         } catch (e: FileNotFoundException) {
