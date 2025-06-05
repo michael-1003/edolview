@@ -5,13 +5,19 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.GL30
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g2d.Batch
+import com.badlogic.gdx.graphics.g2d.PolygonBatch
+import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
+import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.ui.Widget
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import kr.edoli.edolview.image.ClipboardUtils
 import kr.edoli.edolview.image.ImageConvert
+import kr.edoli.edolview.ui.vg.GDXSimpleVG
+import kr.edoli.edolview.ui.vg.SVGSimpleVG
+import kr.edoli.edolview.ui.vg.SimpleVG
 
 abstract class VGWidget : Widget() {
 
@@ -29,18 +35,16 @@ abstract class VGWidget : Widget() {
                 fbo.begin()
 
                 // Get batch for drawing
-                val fboBatch = SpriteBatch()
+                val fboBatch = PolygonSpriteBatch()
                 // x, y가 0, 0이 되도록 변경// x, y가 0, 0이 되도록 변경
                 val viewport = ScreenViewport().also { it.update(fboWidth, fboHeight, true) }
                 val camera = viewport.camera
-                camera.position.add(widget.x, widget.y, 0f)
-                camera.update()
                 fboBatch.projectionMatrix = viewport.camera.combined
 
                 fboBatch.begin()
 
                 // Draw the widget content
-                drawVG(fboBatch)
+                drawVG(GDXSimpleVG(fboBatch))
 
                 fboBatch.end()
 
@@ -76,7 +80,21 @@ abstract class VGWidget : Widget() {
                 // Dispose resources
                 fboBatch.dispose()
                 fbo.dispose()
+            }
+            addMenu("Copy as SVG") {
+                val widget = this@VGWidget
+                val fboWidth = widget.width.toInt()
+                val fboHeight = widget.height.toInt()
 
+                val vg = SVGSimpleVG()
+
+                vg.beginSVG(fboWidth, fboHeight)
+
+                drawVG(vg)
+
+                val svg = vg.endSVG()
+
+                ClipboardUtils.putSVG(svg)
             }
         }
     }
@@ -84,8 +102,14 @@ abstract class VGWidget : Widget() {
     override fun draw(batch: Batch, parentAlpha: Float) {
         super.draw(batch, parentAlpha)
 
-        drawVG(batch)
+        val oldMatrix = batch.transformMatrix.cpy()
+        batch.transformMatrix = batch.transformMatrix.translate(x, y, 0f)
+
+        val vg = GDXSimpleVG(batch as PolygonBatch)
+        drawVG(vg)
+
+        batch.transformMatrix = oldMatrix
     }
 
-    abstract fun drawVG(batch: Batch)
+    abstract fun drawVG(vg: SimpleVG)
 }

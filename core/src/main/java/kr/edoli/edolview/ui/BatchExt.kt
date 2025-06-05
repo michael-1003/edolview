@@ -4,13 +4,14 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.Batch
-import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch
+import com.badlogic.gdx.graphics.g2d.PolygonBatch
 import com.badlogic.gdx.math.DelaunayTriangulator
+import com.badlogic.gdx.math.EarClippingTriangulator
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Rectangle
 
-private val vertices = FloatArray(2000)
-private val indicies = ShortArray(2000)
+private val vertices = FloatArray(4096)
+private val indicies = ShortArray(4096)
 
 private var idx = 0
 private var index = 0
@@ -50,8 +51,9 @@ fun Batch.drawQuad(x1: Float, y1: Float, x2: Float, y2: Float,
     draw(Textures.white, vertices, 0, 20)
 }
 
-fun PolygonSpriteBatch.drawPolygon(points: FloatArray) {
-    val triangles = DelaunayTriangulator().computeTriangles(points, true)
+fun PolygonBatch.drawPolygon(points: FloatArray) {
+//    val triangles = DelaunayTriangulator().computeTriangles(points, true)
+    val triangles = EarClippingTriangulator().computeTriangles(points)
     idx = 0
     index = 0
 
@@ -66,7 +68,7 @@ fun PolygonSpriteBatch.drawPolygon(points: FloatArray) {
     draw(Textures.white, vertices, 0, idx, triangles.toArray(), 0, triangles.size)
 }
 
-fun PolygonSpriteBatch.drawRoundRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
+fun PolygonBatch.drawRoundRect(x: Float, y: Float, width: Float, height: Float, radius: Float) {
     idx = 0
     index = 0
 
@@ -90,11 +92,11 @@ fun PolygonSpriteBatch.drawRoundRect(x: Float, y: Float, width: Float, height: F
     draw(Textures.white, vertices, 0, idx, indicies, 0, index)
 }
 
-fun PolygonSpriteBatch.drawCircle(x: Float, y: Float, radius: Float) {
+fun PolygonBatch.drawCircle(x: Float, y: Float, radius: Float) {
     drawArc(x, y, radius, 0f, 360f)
 }
 
-fun PolygonSpriteBatch.drawArc(x: Float, y: Float, radius: Float, fromAngle: Float, toAngle: Float) {
+fun PolygonBatch.drawArc(x: Float, y: Float, radius: Float, fromAngle: Float, toAngle: Float) {
     idx = 0
     index = 0
 

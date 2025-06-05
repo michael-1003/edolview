@@ -1,5 +1,6 @@
 package kr.edoli.edolview.util
 
+import com.badlogic.gdx.math.Matrix4
 import org.opencv.core.Rect
 import kotlin.math.max
 import kotlin.math.min
@@ -21,6 +22,14 @@ fun Double.ceil(): Double = kotlin.math.ceil(this)
 fun Float.clamp(min: Float, max: Float): Float = max(min, min(this, max))
 fun Float.floor(): Float = kotlin.math.floor(this.toDouble()).toFloat()
 fun Float.ceil(): Float = kotlin.math.ceil(this.toDouble()).toFloat()
+
+fun Matrix4.isIdentity(): Boolean {
+    val value = this.values
+    return value[0] == 1f && value[1] == 0f && value[2] == 0f && value[3] == 0f &&
+           value[4] == 0f && value[5] == 1f && value[6] == 0f && value[7] == 0f &&
+           value[8] == 0f && value[9] == 0f && value[10] == 1f && value[11] == 0f &&
+           value[12] == 0f && value[13] == 0f && value[14] == 0f && value[15] == 1f
+}
 
 
 fun Rect.hflip(targetHeight: Int): Rect {
