@@ -10,6 +10,8 @@ import com.badlogic.gdx.utils.Disposable
 import kr.edoli.edolview.ui.drawLine
 import kr.edoli.edolview.ui.drawPolygon
 import kr.edoli.edolview.ui.drawRect
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Vector graphics drawing class built on libGDX that supports switching backends
@@ -22,21 +24,31 @@ interface SimpleVG {
     fun closePath()
     fun beginGroup(transform: Matrix4? = null)
     fun endGroup()
+
     fun moveTo(x: Float, y: Float)
     fun lineTo(x: Float, y: Float)
     fun quadraticCurveTo(cx: Float, cy: Float, x: Float, y: Float)
     fun bezierCurveTo(cx1: Float, cy1: Float, cx2: Float, cy2: Float, x: Float, y: Float)
-    fun rect(x: Float, y: Float, width: Float, height: Float)
-    fun circle(x: Float, y: Float, radius: Float)
-    fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float)
-    fun polygon(points: FloatArray)
+    fun fillPath()
+    fun strokePath()
+    fun strokeAndFillPath()
+
+    fun line(x: Float, y: Float, x2: Float, y2: Float)
+    fun rect(x: Float, y: Float, width: Float, height: Float, shapeType: ShapeType)
+    fun circle(x: Float, y: Float, radius: Float, shapeType: ShapeType)
+    fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float, shapeType: ShapeType)
+    fun polygon(points: FloatArray, shapeType: ShapeType)
     fun text(text: String, x: Float, y: Float, size: Float = 12f, align: Int = Align.left)
-    fun fill()
-    fun stroke()
-    fun strokeAndFill()
+
     fun setStrokeWidth(width: Float)
     fun setStrokeColor(color: Color)
     fun setFillColor(color: Color)
+}
+
+enum class ShapeType(val isFill: Boolean, val isStroke: Boolean) {
+    FILL(true, false),
+    STROKE(false, true),
+    STROKE_AND_FILL(true, true)
 }
 
 class Polyline {
@@ -177,36 +189,64 @@ class SVGSimpleVG : SimpleVG, Disposable {
         }
     }
 
-    override fun rect(x: Float, y: Float, width: Float, height: Float) {
+    override fun fillPath() {
+        if (!pathStarted) return
+
+        val fillRGB = colorToRGBString(fillColor)
+
+        svgBuilder.append("""<path d="$pathBuilder" fill="$fillRGB" ${fillOpacityString()} stroke="none" />""")
+    }
+
+    override fun strokePath() {
+        if (!pathStarted) return
+
+        val strokeRGB = colorToRGBString(strokeColor)
+
+        svgBuilder.append("""<path d="$pathBuilder" fill="none" stroke="$strokeRGB" ${strokeOpacityString()} stroke-width="$strokeWidth" />""")
+    }
+
+    override fun strokeAndFillPath() {
+        if (!pathStarted) return
+
+        val strokeRGB = colorToRGBString(strokeColor)
+        val fillRGB = colorToRGBString(fillColor)
+
+        svgBuilder.append("""<path d="$pathBuilder" fill="$fillRGB" ${fillOpacityString()} stroke="$strokeRGB" ${strokeOpacityString()} stroke-width="$strokeWidth" />""")
+    }
+
+    private fun svgShapeTypeToSVG(shapeType: ShapeType): String {
+        return when (shapeType) {
+            ShapeType.FILL -> """fill="${colorToRGBString(fillColor)}" ${fillOpacityString()} stroke="none"/>"""
+            ShapeType.STROKE -> """fill="none" stroke="${colorToRGBString(strokeColor)}" ${strokeOpacityString()} stroke-width="$strokeWidth"/>"""
+            ShapeType.STROKE_AND_FILL -> """fill="${colorToRGBString(fillColor)}" ${fillOpacityString()} stroke="${colorToRGBString(strokeColor)}" ${strokeOpacityString()} stroke-width="$strokeWidth"/>"""
+        }
+    }
+
+    override fun line(x: Float, y: Float, x2: Float, y2: Float) {
+        val strokeRGB = colorToRGBString(strokeColor)
+        svgBuilder.append("""<line x1="$x" y1="${transformY(y)}" x2="$x2" y2="${transformY(y2)}" stroke="$strokeRGB" ${strokeOpacityString()} stroke-width="$strokeWidth" />""")
+    }
+
+    override fun rect(x: Float, y: Float, width: Float, height: Float, shapeType: ShapeType) {
         // SVG에서 직사각형은 좌상단에서 시작하므로 y를 변환
         val transformedY = transformY(y + height) // 왼쪽 위 모서리로 변환
-
-        val strokeRGB = colorToRGBString(strokeColor)
-        val fillRGB = colorToRGBString(fillColor)
-
         svgBuilder.append("""<rect x="$x" y="$transformedY" width="$width" height="$height" """)
-        svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
+        svgBuilder.append(svgShapeTypeToSVG(shapeType))
     }
 
-    override fun circle(x: Float, y: Float, radius: Float) {
+    override fun circle(x: Float, y: Float, radius: Float, shapeType: ShapeType) {
         // 원의 중심점 y좌표 변환
-        val strokeRGB = colorToRGBString(strokeColor)
-        val fillRGB = colorToRGBString(fillColor)
-
         svgBuilder.append("""<circle cx="$x" cy="${transformY(y)}" r="$radius" """)
-        svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
+        svgBuilder.append(svgShapeTypeToSVG(shapeType))
     }
 
-    override fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float) {
+    override fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float, shapeType: ShapeType) {
         // 타원의 중심점 y좌표 변환
-        val strokeRGB = colorToRGBString(strokeColor)
-        val fillRGB = colorToRGBString(fillColor)
-
         svgBuilder.append("""<ellipse cx="$x" cy="${transformY(y)}" rx="$radiusX" ry="$radiusY" """)
-        svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
+        svgBuilder.append(svgShapeTypeToSVG(shapeType))
     }
 
-    override fun polygon(points: FloatArray) {
+    override fun polygon(points: FloatArray, shapeType: ShapeType) {
         if (points.size < 4) return
 
         val pointsStr = StringBuilder()
@@ -214,11 +254,8 @@ class SVGSimpleVG : SimpleVG, Disposable {
             pointsStr.append("${points[i]},${transformY(points[i+1])} ")
         }
 
-        val strokeRGB = colorToRGBString(strokeColor)
-        val fillRGB = colorToRGBString(fillColor)
-
         svgBuilder.append("""<polygon points="$pointsStr" """)
-        svgBuilder.append("""stroke="$strokeRGB" stroke-width="$strokeWidth" fill="$fillRGB" />""")
+        svgBuilder.append(svgShapeTypeToSVG(shapeType))
     }
 
     override fun text(text: String, x: Float, y: Float, size: Float, align: Int) {
@@ -233,34 +270,9 @@ class SVGSimpleVG : SimpleVG, Disposable {
             else -> "start"
         }
 
-        svgBuilder.append("""<text x="$x" y="$adjustedY" font-size="$size" text-anchor="$textAlign" fill="${colorToRGBString(fillColor)}" >""")
+        svgBuilder.append("""<text x="$x" y="$adjustedY" font-size="$size" text-anchor="$textAlign" fill="${colorToRGBString(fillColor)}" ${fillOpacityString()} >""")
         svgBuilder.append(text)
         svgBuilder.append("</text>")
-    }
-
-    override fun fill() {
-        if (!pathStarted) return
-
-        val fillRGB = colorToRGBString(fillColor)
-
-        svgBuilder.append("""<path d="$pathBuilder" fill="$fillRGB" stroke="none" />""")
-    }
-
-    override fun stroke() {
-        if (!pathStarted) return
-
-        val strokeRGB = colorToRGBString(strokeColor)
-
-        svgBuilder.append("""<path d="$pathBuilder" fill="none" stroke="$strokeRGB" stroke-width="$strokeWidth" />""")
-    }
-
-    override fun strokeAndFill() {
-        if (!pathStarted) return
-
-        val strokeRGB = colorToRGBString(strokeColor)
-        val fillRGB = colorToRGBString(fillColor)
-
-        svgBuilder.append("""<path d="$pathBuilder" fill="$fillRGB" stroke="$strokeRGB" stroke-width="$strokeWidth" />""")
     }
 
     override fun setStrokeWidth(width: Float) {
@@ -279,13 +291,16 @@ class SVGSimpleVG : SimpleVG, Disposable {
         val r = (color.r * 255).toInt()
         val g = (color.g * 255).toInt()
         val b = (color.b * 255).toInt()
-        val a = color.a
 
-        return if (a < 1f) {
-            "rgba($r,$g,$b,$a)"
-        } else {
-            "rgb($r,$g,$b)"
-        }
+        return "rgb($r,$g,$b)"
+    }
+
+    private fun fillOpacityString(): String {
+        return if (fillColor.a < 1f) " fill-opacity=\"${fillColor.a}\"" else ""
+    }
+
+    private fun strokeOpacityString(): String {
+        return if (strokeColor.a < 1f) " stroke-opacity=\"${strokeColor.a}\"" else ""
     }
 
     private fun matrixToSVGTransform(matrix: Matrix4): String {
@@ -370,22 +385,63 @@ class GDXSimpleVG(val batch: PolygonBatch, val font: BitmapFont) : SimpleVG {
         }
     }
 
-    override fun rect(x: Float, y: Float, width: Float, height: Float) {
-        batch.drawRect(x, y, width, height)
+    override fun fillPath() {
+        drawPolyline(paths, true, false)
+        paths.clear()
+        path = Polyline()
     }
 
-    override fun circle(x: Float, y: Float, radius: Float) {
-        ellipse(x, y, radius, radius)
+    override fun strokePath() {
+        drawPolyline(paths, false, true)
+        paths.clear()
+        path = Polyline()
     }
 
-    override fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float) {
+    override fun strokeAndFillPath() {
+        drawPolyline(paths, true, true)
+        paths.clear()
+        path = Polyline()
+    }
+
+    private fun executeShapeType(shapeType: ShapeType) {
+        when (shapeType) {
+            ShapeType.FILL -> fillPath()
+            ShapeType.STROKE -> strokePath()
+            ShapeType.STROKE_AND_FILL -> strokeAndFillPath()
+        }
+    }
+
+    override fun line(x: Float, y: Float, x2: Float, y2: Float) {
+        batch.color = strokeColor
+        batch.drawLine(x, y, x2, y2, strokeWidth)
+    }
+
+    override fun rect(x: Float, y: Float, width: Float, height: Float, shapeType: ShapeType) {
+        if (shapeType.isFill) {
+            batch.color = fillColor
+            batch.drawRect(x, y, width, height)
+        }
+        if (shapeType.isStroke) {
+            batch.color = strokeColor
+            batch.drawLine(x, y, x + width, y, strokeWidth)
+            batch.drawLine(x + width, y, x + width, y + height, strokeWidth)
+            batch.drawLine(x + width, y + height, x, y + height, strokeWidth)
+            batch.drawLine(x, y + height, x, y, strokeWidth)
+        }
+    }
+
+    override fun circle(x: Float, y: Float, radius: Float, shapeType: ShapeType) {
+        ellipse(x, y, radius, radius, shapeType)
+    }
+
+    override fun ellipse(x: Float, y: Float, radiusX: Float, radiusY: Float, shapeType: ShapeType) {
         beginPath()
 
         val segments = 24
         for (i in 0..segments) {
             val angle = (i.toFloat() / segments) * Math.PI.toFloat() * 2f
-            val px = x + radiusX * Math.cos(angle.toDouble()).toFloat()
-            val py = y + radiusY * Math.sin(angle.toDouble()).toFloat()
+            val px = x + radiusX * cos(angle.toDouble()).toFloat()
+            val py = y + radiusY * sin(angle.toDouble()).toFloat()
 
             if (i == 0) {
                 moveTo(px, py)
@@ -395,9 +451,11 @@ class GDXSimpleVG(val batch: PolygonBatch, val font: BitmapFont) : SimpleVG {
         }
 
         closePath()
+
+        executeShapeType(shapeType)
     }
 
-    override fun polygon(points: FloatArray) {
+    override fun polygon(points: FloatArray, shapeType: ShapeType) {
         if (points.size < 4) return
 
         beginPath()
@@ -408,29 +466,15 @@ class GDXSimpleVG(val batch: PolygonBatch, val font: BitmapFont) : SimpleVG {
         }
 
         closePath()
+
+        executeShapeType(shapeType)
     }
 
     override fun text(text: String, x: Float, y: Float, size: Float, align: Int) {
-        batch.color = fillColor
+        val originalColor = font.color.cpy()
+        font.color = fillColor
         font.draw(batch, text, x, y, 0f, align, false)
-    }
-
-    override fun fill() {
-        drawPolyline(paths, true, false)
-        paths.clear()
-        path = Polyline()
-    }
-
-    override fun stroke() {
-        drawPolyline(paths, false, true)
-        paths.clear()
-        path = Polyline()
-    }
-
-    override fun strokeAndFill() {
-        drawPolyline(paths, true, true)
-        paths.clear()
-        path = Polyline()
+        font.color = originalColor
     }
 
     override fun setStrokeWidth(width: Float) {

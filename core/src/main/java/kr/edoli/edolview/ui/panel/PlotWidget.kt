@@ -44,7 +44,7 @@ class PlotWidget : VGWidget() {
                 offsetX += step
             }
 
-            vg.stroke()
+            vg.strokePath()
         }
     }
 }

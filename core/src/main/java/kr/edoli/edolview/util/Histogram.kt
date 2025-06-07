@@ -1,6 +1,7 @@
 package kr.edoli.edolview.util
 
 import org.opencv.core.Mat
+import kotlin.math.max
 
 /**
  * Created by daniel on 16. 2. 27.
@@ -9,6 +10,12 @@ class Histogram(val n: Int) {
     val freq = IntArray(n)
     var maxFreq = 0
         private set
+
+    var minValue: Double = 0.0
+        private set
+    var maxValue: Double = 1.0
+        private set
+
 
     init {
         clear()
@@ -35,9 +42,20 @@ class Histogram(val n: Int) {
         val denominator = (maxValue - minValue)
 
         rawData.forEach { v ->
-            val ind = (n * ((v - minValue) / denominator)).toInt()
+            val ind = ((n - 1) * ((v - minValue) / denominator) + 0.5).toInt()
             addDataPoint(ind)
         }
+
+        this.minValue = minValue
+        this.maxValue = maxValue
+    }
+
+    fun value(index: Int): Double {
+        val denominator = (maxValue - minValue)
+        if (denominator == 0.0) {
+            return 0.0
+        }
+        return (index * denominator) / (n - 1) + minValue
     }
 
     fun clear() {
