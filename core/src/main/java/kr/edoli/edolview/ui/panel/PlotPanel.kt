@@ -50,11 +50,17 @@ class PlotPanel : Panel(false) {
             val reducedMat = if (reduceDim == 0) Mat(1, mat.cols(), mat.type()) else
                 Mat(mat.rows(), 1, mat.type())
             Core.reduce(mat, reducedMat, reduceDim, Core.REDUCE_AVG)
+
             val data = reducedMat.toDoubleArray()
+
+            val marqueeBox = ImContext.marqueeBox.get()
+            val xAxis = if (reduceDim == 0) PlotIntRange(marqueeBox.x..marqueeBox.x+marqueeBox.width) else PlotIntRange(marqueeBox.y..marqueeBox.y+marqueeBox.height)
 
             reducedMat.release()
 
             plotWidget.channels = reducedMat.channels()
+            plotWidget.xAxisName = if (reduceDim == 0) "X" else "Y"
+            plotWidget.xAxis = xAxis
             plotWidget.data = FloatArray(data.size) { data[it].toFloat() }
 
             val maxValue = data.maxOrNull() ?: return

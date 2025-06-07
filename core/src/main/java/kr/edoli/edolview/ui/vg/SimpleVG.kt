@@ -43,6 +43,18 @@ interface SimpleVG {
     fun setStrokeWidth(width: Float)
     fun setStrokeColor(color: Color)
     fun setFillColor(color: Color)
+
+    fun grid(x: Float, y: Float, width: Float, height: Float, gridX: Int, gridY: Int = gridX) {
+        val stepX = width / gridX
+        val stepY = height / gridY
+
+        for (i in 0..gridX) {
+            line(x + i * stepX, y, x + i * stepX, y + height)
+        }
+        for (j in 0..gridY) {
+            line(x, y + j * stepY, x + width, y + j * stepY)
+        }
+    }
 }
 
 enum class ShapeType(val isFill: Boolean, val isStroke: Boolean) {

@@ -8,6 +8,10 @@ import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.PolygonBatch
 import com.badlogic.gdx.graphics.g2d.PolygonSpriteBatch
 import com.badlogic.gdx.graphics.glutils.FrameBuffer
+import com.badlogic.gdx.scenes.scene2d.Actor
+import com.badlogic.gdx.scenes.scene2d.EventListener
+import com.badlogic.gdx.scenes.scene2d.InputEvent
+import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.ui.Widget
 import com.badlogic.gdx.utils.BufferUtils
 import com.badlogic.gdx.utils.viewport.ScreenViewport
@@ -20,7 +24,29 @@ import kr.edoli.edolview.ui.vg.SimpleVG
 
 abstract class VGWidget : Widget() {
 
+    var isOver = false
+    var mouseX = 0f
+    var mouseY = 0f
+
     init {
+        addListener(object : InputListener() {
+            override fun mouseMoved(event: InputEvent?, x: Float, y: Float): Boolean {
+                mouseX = x
+                mouseY = y
+                return false
+            }
+
+            override fun enter(event: InputEvent?, x: Float, y: Float, pointer: Int, fromActor: Actor?) {
+                isOver = true
+            }
+            override fun exit(event: InputEvent?, x: Float, y: Float, pointer: Int, toActor: Actor?) {
+                if (toActor == this@VGWidget) {
+                    return
+                }
+                isOver = false
+            }
+        })
+
         contextMenu {
             addMenu("Copy as PNG") {
                 val widget = this@VGWidget
@@ -113,4 +139,8 @@ abstract class VGWidget : Widget() {
     }
 
     abstract fun drawVG(vg: SimpleVG)
+
+    final override fun addListener(listener: EventListener?): Boolean {
+        return super.addListener(listener)
+    }
 }

@@ -23,10 +23,26 @@ private fun formatDigits(value: Double, digits: Int?): String {
     }
 }
 
+private fun formatDigits(value: Float, digits: Int?): String {
+    return if (digits != null) {
+        String.format("%.${digits}f", value)
+    } else {
+        value.toString()
+    }
+}
+
 fun Double.toColorValueStr(imageSpec: ImageSpec, decimalDigits: Int? = null): String {
     val scale = imageSpec.typeMaxValue
 
-    var value = if (scale > 0) this * scale else this
+    val value = if (scale > 0) this * scale else this
+
+    return if (imageSpec.isInt) value.format(0) else formatDigits(value, decimalDigits)
+}
+
+fun Float.toColorValueStr(imageSpec: ImageSpec, decimalDigits: Int? = null): String {
+    val scale = imageSpec.typeMaxValue.toFloat()
+
+    val value = if (scale > 0) this * scale else this
 
     return if (imageSpec.isInt) value.format(0) else formatDigits(value, decimalDigits)
 }
@@ -43,4 +59,20 @@ fun DoubleArray.toColorStr(imageSpec: ImageSpec, separator: String = ", ", decim
         if (imageSpec.isInt) value.format(0) else formatDigits(value, decimalDigits)
     }
 
+fun FloatArray.toColorStr(imageSpec: ImageSpec, separator: String = ", ", decimalDigits: Int? = null) =
+    joinToString(separator) {
+        // scale == 0 means that an opened image is not uint image
+        val scale = imageSpec.typeMaxValue.toFloat()
+
+        var value = it
+        if (scale > 0) {
+            value *= scale
+        }
+        if (imageSpec.isInt) value.format(0) else formatDigits(value, decimalDigits)
+    }
+
 fun Color.toFloatArray() = floatArrayOf(this.r, this.g, this.b, this.a)
+
+fun Color.alpha(alpha: Float): Color {
+    return Color(this.r, this.g, this.b, alpha)
+}
