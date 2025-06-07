@@ -47,7 +47,7 @@ fun Batch.drawQuad(x1: Float, y1: Float, x2: Float, y2: Float,
                    x3: Float, y3: Float, x4: Float, y4: Float) {
 
     idx = 0
-    quad(x1, y1, x2, y2, x3, y3, x4, y4)
+    quad(x1, y1, x2, y2, x3, y3, x4, y4, packedColor)
     draw(Textures.white, vertices, 0, 20)
 }
 
@@ -82,10 +82,11 @@ fun PolygonBatch.drawRoundRect(x: Float, y: Float, width: Float, height: Float, 
     val padX2 = x2 - radius
     val padY2 = y2 - radius
 
-    arc(padX2, padY1, radius, -90f, 0f)
-    arc(padX2, padY2, radius, 0f, 90f)
-    arc(padX1, padY2, radius, 90f, 180f)
-    arc(padX1, padY1, radius, 180f, 270f)
+    val color = packedColor
+    arc(padX2, padY1, radius, -90f, 0f, color)
+    arc(padX2, padY2, radius, 0f, 90f, color)
+    arc(padX1, padY2, radius, 90f, 180f, color)
+    arc(padX1, padY1, radius, 180f, 270f, color)
 
     triangleFan(0, idx / 5)
 
@@ -106,7 +107,7 @@ fun PolygonBatch.drawArc(x: Float, y: Float, radius: Float, fromAngle: Float, to
     vertices[idx++] = 0f
     vertices[idx++] = 0f
 
-    arc(x, y, radius, fromAngle, toAngle)
+    arc(x, y, radius, fromAngle, toAngle, packedColor)
 
     triangleFan(0, idx / 5)
 
@@ -145,9 +146,7 @@ fun Batch.drawBorder(x1: Float, y1: Float, x2: Float, y2: Float
     drawLine(x4 + 0.5f, y4 - 0.5f, x1 + 0.5f, y1 + 0.5f, lineWidth)
 }
 
-private fun Batch.line(x1: Float, y1: Float, x2: Float, y2: Float) {
-    val color = packedColor
-
+private fun line(x1: Float, y1: Float, x2: Float, y2: Float, color: Float) {
     vertices[idx++] = x1
     vertices[idx++] = y1
     vertices[idx++] = color
@@ -161,10 +160,8 @@ private fun Batch.line(x1: Float, y1: Float, x2: Float, y2: Float) {
     vertices[idx++] = 0f
 }
 
-private fun Batch.quad(x1: Float, y1: Float, x2: Float, y2: Float,
-                       x3: Float, y3: Float, x4: Float, y4: Float) {
-
-    val color = packedColor
+private fun quad(x1: Float, y1: Float, x2: Float, y2: Float,
+                       x3: Float, y3: Float, x4: Float, y4: Float, color: Float) {
 
     vertices[idx++] = x1
     vertices[idx++] = y1
@@ -192,9 +189,7 @@ private fun Batch.quad(x1: Float, y1: Float, x2: Float, y2: Float,
 
 }
 
-private fun Batch.arc(x: Float, y: Float, radius: Float, fromAngle: Float, toAngle: Float) {
-    val color = packedColor
-
+private fun arc(x: Float, y: Float, radius: Float, fromAngle: Float, toAngle: Float, color: Float) {
     var angle = fromAngle
     var deltaAngle = (toAngle - fromAngle) / 15
 
@@ -209,7 +204,7 @@ private fun Batch.arc(x: Float, y: Float, radius: Float, fromAngle: Float, toAng
     }
 }
 
-private fun Batch.triangleFan(start: Int, count: Int) {
+private fun triangleFan(start: Int, count: Int) {
     for (i in 0..count-2) {
         indicies[index++] = start.toShort()
         indicies[index++] = (start + i).toShort()
