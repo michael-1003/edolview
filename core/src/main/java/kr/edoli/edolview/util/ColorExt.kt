@@ -15,15 +15,32 @@ fun DoubleArray.toColor(): Color {
     }
 }
 
-fun DoubleArray.toColorStr(imageSpec: ImageSpec, separator: String = ", ") = map {
-    // scale == 0 means that an opened image is not uint image
+private fun formatDigits(value: Double, digits: Int?): String {
+    return if (digits != null) {
+        String.format("%.${digits}f", value)
+    } else {
+        value.toString()
+    }
+}
+
+fun Double.toColorValueStr(imageSpec: ImageSpec, decimalDigits: Int? = null): String {
     val scale = imageSpec.typeMaxValue
 
-    var value = it
-    if (scale > 0) {
-        value *= scale
+    var value = if (scale > 0) this * scale else this
+
+    return if (imageSpec.isInt) value.format(0) else formatDigits(value, decimalDigits)
+}
+
+fun DoubleArray.toColorStr(imageSpec: ImageSpec, separator: String = ", ", decimalDigits: Int? = null) =
+    joinToString(separator) {
+        // scale == 0 means that an opened image is not uint image
+        val scale = imageSpec.typeMaxValue
+
+        var value = it
+        if (scale > 0) {
+            value *= scale
+        }
+        if (imageSpec.isInt) value.format(0) else formatDigits(value, decimalDigits)
     }
-    if (imageSpec.isInt) value.format(0) else value
-}.joinToString(separator)
 
 fun Color.toFloatArray() = floatArrayOf(this.r, this.g, this.b, this.a)
