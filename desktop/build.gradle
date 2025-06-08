@@ -44,6 +44,12 @@ run {
     workingDir = project.assetsDir
     args = ["-d"]
     jvmArgs = ["--add-opens", "java.base/java.nio=ALL-UNNAMED"]
+
+    OperatingSystem os = org.gradle.nativeplatform.platform.internal.DefaultNativePlatform.currentOperatingSystem;
+    if (os.isLinux()) {
+        def existingLdPath = System.getenv("LD_LIBRARY_PATH") ?: ""
+        environment "LD_LIBRARY_PATH", "lib:${existingLdPath}"
+    }
 }
 
 distTar.enabled = false
